@@ -15,7 +15,7 @@ Run these commands from the parent directory that contains `cmdpost-connector/`.
 
 ```sh
 mkdir -p dist
-zip -X dist/cmdpost-connector.zip cmdpost-connector/cmdpost-connector.php cmdpost-connector/updates.php cmdpost-connector/core-updates.php cmdpost-connector/uninstall.php
+zip -X dist/cmdpost-connector.zip cmdpost-connector/*.php cmdpost-connector/readme.txt cmdpost-connector/assets/*
 ```
 
 The ZIP should contain one top-level directory, `cmdpost-connector/`. The plugin

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CmdPost Connector
  * Description: Reports installed versions and applies approved WordPress core patches, plugin updates, and theme updates from CmdPost.
- * Version: 0.6.1
+ * Version: 0.6.2
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Text Domain: cmdpost-connector
@@ -20,6 +20,7 @@ const REPORT_HOOK = 'cmdpost_connector_report';
 require_once __DIR__ . '/updates.php';
 
 add_action( 'admin_menu', __NAMESPACE__ . '\\register_settings_page' );
+add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_settings_styles' );
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), __NAMESPACE__ . '\\add_settings_link' );
 add_action( 'admin_post_cmdpost_connector', __NAMESPACE__ . '\\handle_settings_action' );
 add_action( 'template_redirect', __NAMESPACE__ . '\\serve_verification_challenge', 0 );
@@ -54,6 +55,12 @@ function clear_schedule() {
 function register_settings_page() {
 	if ( ! is_multisite() ) {
 		add_options_page( 'CmdPost Connector', 'CmdPost Connector', 'manage_options', 'cmdpost-connector', __NAMESPACE__ . '\\settings_page' );
+	}
+}
+
+function enqueue_settings_styles( $hook_suffix ) {
+	if ( 'settings_page_cmdpost-connector' === $hook_suffix ) {
+		wp_enqueue_style( 'cmdpost-connector-admin', plugins_url( 'assets/admin.css', __FILE__ ), array(), (string) filemtime( __DIR__ . '/assets/admin.css' ) );
 	}
 }
 
@@ -102,59 +109,88 @@ function settings_page() {
 		'updates-disable-unsynced' => __( 'WordPress stopped accepting updates. CmdPost could not be reached to confirm the change.', 'cmdpost-connector' ),
 	);
 	?>
-	<div class="wrap">
-		<h1><?php esc_html_e( 'CmdPost Connector', 'cmdpost-connector' ); ?></h1>
-		<p class="description"><?php echo esc_html( sprintf( __( 'Version %s', 'cmdpost-connector' ), $version ) ); ?></p>
+	<div class="wrap cmdpost-dashboard">
+		<header class="cmdpost-dashboard-header">
+			<div>
+				<img class="cmdpost-dashboard-logo" src="<?php echo esc_url( plugins_url( 'assets/cmdpost-logo-gradient-pink-text.svg', __FILE__ ) ); ?>" alt="" width="759" height="160">
+				<h1><?php esc_html_e( 'CmdPost Connector', 'cmdpost-connector' ); ?></h1>
+			</div>
+			<p class="description"><?php echo esc_html( sprintf( __( 'Version %s', 'cmdpost-connector' ), $version ) ); ?></p>
+		</header>
 		<?php if ( isset( $messages[ $result ] ) ) : ?>
 			<?php $success = in_array( $result, array( 'paired', 'reported', 'cleared', 'recent', 'updates-enabled', 'updates-disabled' ), true ); ?>
 			<div class="notice <?php echo $success ? 'notice-success' : 'notice-error'; ?>"><p><?php echo esc_html( $messages[ $result ] ); ?></p></div>
 		<?php endif; ?>
 		<?php if ( empty( $connection['token'] ) ) : ?>
-			<p><?php esc_html_e( 'Get a pairing code from the site’s page in CmdPost. The connector can verify ownership of a publicly reachable HTTPS site. Pairing shares your WordPress and PHP versions, installed plugins and themes, and the updates WordPress offers.', 'cmdpost-connector' ); ?></p>
-			<p><?php esc_html_e( 'WordPress Site Address', 'cmdpost-connector' ); ?> <code><?php echo esc_html( site_address() ); ?></code></p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<?php wp_nonce_field( 'cmdpost_connector' ); ?>
-				<input type="hidden" name="action" value="cmdpost_connector">
-				<input type="hidden" name="task" value="pair">
-				<table class="form-table"><tbody>
-					<tr><th scope="row"><label for="cmdpost-url"><?php esc_html_e( 'CmdPost URL', 'cmdpost-connector' ); ?></label></th>
-						<td><input class="regular-text" id="cmdpost-url" name="endpoint" type="url" placeholder="https://" maxlength="2048" aria-describedby="cmdpost-url-help" required>
-							<p class="description" id="cmdpost-url-help"><?php esc_html_e( 'Use the public HTTPS URL of the CmdPost instance that generated your code.', 'cmdpost-connector' ); ?></p></td></tr>
-					<tr><th scope="row"><label for="cmdpost-code"><?php esc_html_e( 'Pairing code', 'cmdpost-connector' ); ?></label></th>
-						<td><input class="regular-text" id="cmdpost-code" name="code" type="text" autocomplete="off" spellcheck="false" maxlength="115" required></td></tr>
-				</tbody></table>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Connect to CmdPost', 'cmdpost-connector' ); ?></button>
-			</form>
-		<?php else : ?>
-			<p><?php esc_html_e( 'CmdPost URL', 'cmdpost-connector' ); ?> <code><?php echo esc_html( $connection['endpoint'] ); ?></code></p>
-			<?php $last_report = (int) get_option( LAST_REPORT_OPTION, 0 ); ?>
-			<p><?php esc_html_e( 'Last successful report', 'cmdpost-connector' ); ?>
-				<strong><?php echo esc_html( ! $last_report ? __( 'Waiting for first report', 'cmdpost-connector' ) : wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $last_report ) ); ?></strong></p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<?php wp_nonce_field( 'cmdpost_connector' ); ?>
-				<input type="hidden" name="action" value="cmdpost_connector">
-				<button class="button button-primary" name="task" value="report"><?php esc_html_e( 'Send status now', 'cmdpost-connector' ); ?></button>
-				<button class="button" name="task" value="clear"><?php esc_html_e( 'Clear saved connection', 'cmdpost-connector' ); ?></button>
-			</form>
-			<p class="description"><?php esc_html_e( 'Use Disconnect WordPress in CmdPost to revoke this connection before clearing it here.', 'cmdpost-connector' ); ?></p>
-			<h2><?php esc_html_e( 'Remote WordPress updates', 'cmdpost-connector' ); ?></h2>
-			<p><?php esc_html_e( 'CmdPost can queue one approved update at a time. WordPress checks for queued updates every five minutes when WP-Cron runs.', 'cmdpost-connector' ); ?></p>
-			<?php
-			$update_permissions = array(
-				'plugin' => array( 'updates', __( 'Enable remote plugin updates', 'cmdpost-connector' ), __( 'Disable remote plugin updates', 'cmdpost-connector' ) ),
-				'theme'  => array( 'theme_updates', __( 'Enable remote theme updates', 'cmdpost-connector' ), __( 'Disable remote theme updates', 'cmdpost-connector' ) ),
-				'core'   => array( 'core_updates', __( 'Enable remote core patches', 'cmdpost-connector' ), __( 'Disable remote core patches', 'cmdpost-connector' ) ),
-			);
-			foreach ( $update_permissions as $kind => list( $task_prefix, $enable_label, $disable_label ) ) :
-				$updates_enabled = null !== update_grant( $connection, $kind );
-				?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<?php wp_nonce_field( 'cmdpost_connector', '_cmdpost_' . $kind . '_nonce' ); ?>
+			<section class="cmdpost-dashboard-card" aria-labelledby="cmdpost-connection">
+				<h2 id="cmdpost-connection"><?php esc_html_e( 'Connect this site', 'cmdpost-connector' ); ?></h2>
+				<p><?php esc_html_e( 'Generate a pairing code from this site’s page in CmdPost. Pairing shares your WordPress and PHP versions, installed plugins and themes, and available updates.', 'cmdpost-connector' ); ?></p>
+				<dl class="cmdpost-dashboard-details">
+					<dt><?php esc_html_e( 'WordPress Site Address', 'cmdpost-connector' ); ?></dt>
+					<dd><code><?php echo esc_html( site_address() ); ?></code></dd>
+				</dl>
+				<form class="cmdpost-dashboard-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<?php wp_nonce_field( 'cmdpost_connector' ); ?>
 					<input type="hidden" name="action" value="cmdpost_connector">
-					<input type="hidden" name="task" value="<?php echo esc_attr( $task_prefix . ( $updates_enabled ? '_disable' : '_enable' ) ); ?>">
-					<button type="submit" class="button"><?php echo esc_html( $updates_enabled ? $disable_label : $enable_label ); ?></button>
+					<input type="hidden" name="task" value="pair">
+					<div class="cmdpost-dashboard-field">
+						<label for="cmdpost-url"><?php esc_html_e( 'CmdPost URL', 'cmdpost-connector' ); ?></label>
+						<input id="cmdpost-url" name="endpoint" type="url" placeholder="https://" maxlength="2048" aria-describedby="cmdpost-url-help" required>
+						<p class="description" id="cmdpost-url-help"><?php esc_html_e( 'Use the public HTTPS URL of the CmdPost instance that generated your code.', 'cmdpost-connector' ); ?></p>
+					</div>
+					<div class="cmdpost-dashboard-field">
+						<label for="cmdpost-code"><?php esc_html_e( 'Pairing code', 'cmdpost-connector' ); ?></label>
+						<input id="cmdpost-code" name="code" type="text" autocomplete="off" spellcheck="false" maxlength="115" required>
+					</div>
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Connect to CmdPost', 'cmdpost-connector' ); ?></button>
 				</form>
-			<?php endforeach; ?>
+			</section>
+		<?php else : ?>
+			<?php $last_report = (int) get_option( LAST_REPORT_OPTION, 0 ); ?>
+			<section class="cmdpost-dashboard-card" aria-labelledby="cmdpost-connection">
+				<h2 id="cmdpost-connection"><?php esc_html_e( 'Connection', 'cmdpost-connector' ); ?></h2>
+				<dl class="cmdpost-dashboard-details">
+					<dt><?php esc_html_e( 'CmdPost URL', 'cmdpost-connector' ); ?></dt>
+					<dd><code><?php echo esc_html( $connection['endpoint'] ); ?></code></dd>
+					<dt><?php esc_html_e( 'Last successful report', 'cmdpost-connector' ); ?></dt>
+					<dd><?php echo esc_html( ! $last_report ? __( 'Waiting for first report', 'cmdpost-connector' ) : wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $last_report ) ); ?></dd>
+				</dl>
+				<form class="cmdpost-dashboard-actions" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<?php wp_nonce_field( 'cmdpost_connector' ); ?>
+					<input type="hidden" name="action" value="cmdpost_connector">
+					<button type="submit" class="button button-primary" name="task" value="report"><?php esc_html_e( 'Send status now', 'cmdpost-connector' ); ?></button>
+					<button type="submit" class="button cmdpost-dashboard-danger" name="task" value="clear" aria-describedby="cmdpost-clear-help"><?php esc_html_e( 'Clear saved connection', 'cmdpost-connector' ); ?></button>
+				</form>
+				<p class="description" id="cmdpost-clear-help"><?php esc_html_e( 'To revoke the credential, disconnect WordPress in CmdPost before clearing it here.', 'cmdpost-connector' ); ?></p>
+			</section>
+			<section class="cmdpost-dashboard-card" aria-labelledby="cmdpost-permissions">
+				<h2 id="cmdpost-permissions"><?php esc_html_e( 'Remote WordPress updates', 'cmdpost-connector' ); ?></h2>
+				<p><?php esc_html_e( 'Approve updates individually in CmdPost. WordPress checks the queue every five minutes when WP-Cron runs.', 'cmdpost-connector' ); ?></p>
+				<ul class="cmdpost-dashboard-permissions">
+					<?php
+					$update_permissions = array(
+						'plugin' => array( 'updates', __( 'Plugin updates', 'cmdpost-connector' ), __( 'Enable remote plugin updates', 'cmdpost-connector' ), __( 'Disable remote plugin updates', 'cmdpost-connector' ) ),
+						'theme'  => array( 'theme_updates', __( 'Theme updates', 'cmdpost-connector' ), __( 'Enable remote theme updates', 'cmdpost-connector' ), __( 'Disable remote theme updates', 'cmdpost-connector' ) ),
+						'core'   => array( 'core_updates', __( 'WordPress core patches', 'cmdpost-connector' ), __( 'Enable remote core patches', 'cmdpost-connector' ), __( 'Disable remote core patches', 'cmdpost-connector' ) ),
+					);
+					foreach ( $update_permissions as $kind => list( $task_prefix, $label, $enable_label, $disable_label ) ) :
+						$updates_enabled = null !== update_grant( $connection, $kind );
+						?>
+						<li class="cmdpost-dashboard-permission">
+							<div>
+								<strong><?php echo esc_html( $label ); ?></strong>
+								<span class="cmdpost-dashboard-state<?php echo $updates_enabled ? ' is-enabled' : ''; ?>"><?php echo esc_html( $updates_enabled ? __( 'Enabled', 'cmdpost-connector' ) : __( 'Disabled', 'cmdpost-connector' ) ); ?></span>
+							</div>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<?php wp_nonce_field( 'cmdpost_connector', '_cmdpost_' . $kind . '_nonce' ); ?>
+								<input type="hidden" name="action" value="cmdpost_connector">
+								<input type="hidden" name="task" value="<?php echo esc_attr( $task_prefix . ( $updates_enabled ? '_disable' : '_enable' ) ); ?>">
+								<button type="submit" class="button" aria-label="<?php echo esc_attr( $updates_enabled ? $disable_label : $enable_label ); ?>"><?php echo esc_html( $updates_enabled ? __( 'Disable', 'cmdpost-connector' ) : __( 'Enable', 'cmdpost-connector' ) ); ?></button>
+							</form>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			</section>
 		<?php endif; ?>
 	</div>
 	<?php

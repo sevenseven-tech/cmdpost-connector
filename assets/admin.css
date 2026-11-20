@@ -1,0 +1,179 @@
+body.settings_page_cmdpost-connector {
+  background: #fff;
+}
+
+.cmdpost-dashboard {
+  --cmdpost-text: #302a38;
+  --cmdpost-muted: #615c6a;
+  --cmdpost-border: #eeebf1;
+  --cmdpost-pink: #cf2877;
+  --cmdpost-plum: #9d2569;
+  --cmdpost-panel: #faf7fb;
+  color: var(--cmdpost-text);
+  max-width: 840px;
+  margin-block: 32px;
+}
+
+.cmdpost-dashboard-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 24px;
+}
+
+.cmdpost-dashboard-logo {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: auto;
+}
+
+.cmdpost-dashboard h1 {
+  padding: 0;
+  margin: 16px 0 0;
+  color: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.cmdpost-dashboard h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.cmdpost-dashboard p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.cmdpost-dashboard .description {
+  margin: 0;
+  color: var(--cmdpost-muted);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.cmdpost-dashboard-card {
+  background: #fff;
+  border: 1px solid var(--cmdpost-border);
+  border-radius: 8px;
+  padding: clamp(16px, 3vw, 24px);
+  margin-bottom: 18px;
+}
+
+.cmdpost-dashboard .notice {
+  margin: 0 0 18px;
+}
+
+.cmdpost-dashboard-details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 16px 0;
+  padding: 12px 14px;
+  background: var(--cmdpost-panel);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.cmdpost-dashboard-details dt { color: var(--cmdpost-muted); }
+.cmdpost-dashboard-details dd { margin: 0; overflow-wrap: anywhere; }
+.cmdpost-dashboard-details code { padding: 0; background: none; }
+
+.cmdpost-dashboard-form {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  max-width: 460px;
+}
+
+.cmdpost-dashboard-field { display: grid; gap: 6px; width: 100%; }
+.cmdpost-dashboard-field label { font-size: 14px; font-weight: 600; }
+
+.cmdpost-dashboard-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid #c9bfce;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--cmdpost-text);
+  font-size: 16px;
+}
+
+.cmdpost-dashboard-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
+
+.cmdpost-dashboard .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  max-width: 100%;
+  margin: 0;
+  padding: 10px 15px;
+  border: 1px solid #e9e2ed;
+  border-radius: 6px;
+  color: var(--cmdpost-text);
+  background: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+}
+
+.cmdpost-dashboard .button:hover,
+.cmdpost-dashboard .button:active { border-color: #d4bdce; background: #fdfafd; }
+
+.cmdpost-dashboard .button-primary {
+  padding: 11px 17px;
+  border-color: var(--cmdpost-pink);
+  color: #fff;
+  background: var(--cmdpost-pink);
+  font-weight: 650;
+  box-shadow: 0 3px 6px #cf287712;
+  text-shadow: none;
+}
+
+.cmdpost-dashboard .button-primary:hover,
+.cmdpost-dashboard .button-primary:active { border-color: #b82069; color: #fff; background: #b82069; }
+.cmdpost-dashboard .cmdpost-dashboard-danger { color: #a42540; border-color: #efbcc7; }
+.cmdpost-dashboard-field input:focus { border-color: var(--cmdpost-plum); }
+
+.cmdpost-dashboard .button:focus-visible,
+.cmdpost-dashboard-field input:focus-visible {
+  outline: 2px solid var(--cmdpost-plum);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.cmdpost-dashboard-permissions { padding: 0; margin: 8px 0 0; list-style: none; }
+
+.cmdpost-dashboard-permission {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 0;
+  margin: 0;
+  border-top: 1px solid var(--cmdpost-border);
+}
+
+.cmdpost-dashboard-permission:last-child { padding-bottom: 0; }
+.cmdpost-dashboard-permission strong { display: block; font-size: 14px; }
+.cmdpost-dashboard-state { display: block; margin-top: 2px; color: var(--cmdpost-muted); }
+.cmdpost-dashboard-state.is-enabled { color: #187d63; font-weight: 600; }
+
+@media (max-width: 480px) {
+  .cmdpost-dashboard { margin-block: 24px; }
+  .cmdpost-dashboard-details { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .cmdpost-dashboard-details dt:not(:first-child) { margin-top: 6px; }
+}
