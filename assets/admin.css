@@ -9,6 +9,8 @@ body.settings_page_cmdpost-connector {
   --cmdpost-pink: #cf2877;
   --cmdpost-plum: #9d2569;
   --cmdpost-panel: #faf7fb;
+  --cmdpost-warning: #b47635;
+  --cmdpost-warning-text: #8a5a1e;
   color: var(--cmdpost-text);
   max-width: 840px;
   margin-block: 32px;
@@ -144,7 +146,16 @@ body.settings_page_cmdpost-connector {
 
 .cmdpost-dashboard .button-primary:hover,
 .cmdpost-dashboard .button-primary:active { border-color: #b82069; color: #fff; background: #b82069; }
+.cmdpost-dashboard .button.cmdpost-dashboard-warning {
+  color: var(--cmdpost-warning-text);
+  background: #fdf4e5;
+  border-color: var(--cmdpost-warning);
+}
+.cmdpost-dashboard .button.cmdpost-dashboard-warning:hover,
+.cmdpost-dashboard .button.cmdpost-dashboard-warning:active { background: #faecd6; }
 .cmdpost-dashboard .cmdpost-dashboard-danger { color: #a42540; border-color: #efbcc7; }
+.cmdpost-dashboard .button.cmdpost-dashboard-danger:hover,
+.cmdpost-dashboard .button.cmdpost-dashboard-danger:active { color: var(--cmdpost-text); }
 .cmdpost-dashboard-field input:focus { border-color: var(--cmdpost-plum); }
 
 .cmdpost-dashboard .button:focus-visible,
@@ -169,7 +180,7 @@ body.settings_page_cmdpost-connector {
 
 .cmdpost-dashboard-permission:last-child { padding-bottom: 0; }
 .cmdpost-dashboard-permission strong { display: block; font-size: 14px; }
-.cmdpost-dashboard-state { display: block; margin-top: 2px; color: var(--cmdpost-muted); }
+.cmdpost-dashboard-state { display: block; margin-top: 2px; color: var(--cmdpost-warning-text); }
 .cmdpost-dashboard-state.is-enabled { color: #187d63; font-weight: 600; }
 
 @media (max-width: 480px) {

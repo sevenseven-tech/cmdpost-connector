@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CmdPost Connector
  * Description: Reports installed versions and applies approved WordPress core patches, plugin updates, and theme updates from CmdPost.
- * Version: 0.6.2
+ * Version: 0.6.3
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Text Domain: cmdpost-connector
@@ -185,7 +185,7 @@ function settings_page() {
 								<?php wp_nonce_field( 'cmdpost_connector', '_cmdpost_' . $kind . '_nonce' ); ?>
 								<input type="hidden" name="action" value="cmdpost_connector">
 								<input type="hidden" name="task" value="<?php echo esc_attr( $task_prefix . ( $updates_enabled ? '_disable' : '_enable' ) ); ?>">
-								<button type="submit" class="button" aria-label="<?php echo esc_attr( $updates_enabled ? $disable_label : $enable_label ); ?>"><?php echo esc_html( $updates_enabled ? __( 'Disable', 'cmdpost-connector' ) : __( 'Enable', 'cmdpost-connector' ) ); ?></button>
+								<button type="submit" class="button <?php echo $updates_enabled ? 'cmdpost-dashboard-warning' : 'button-primary'; ?>" aria-label="<?php echo esc_attr( $updates_enabled ? $disable_label : $enable_label ); ?>"><?php echo esc_html( $updates_enabled ? __( 'Disable', 'cmdpost-connector' ) : __( 'Enable', 'cmdpost-connector' ) ); ?></button>
 							</form>
 						</li>
 					<?php endforeach; ?>
