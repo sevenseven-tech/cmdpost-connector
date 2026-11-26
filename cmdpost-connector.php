@@ -6,7 +6,8 @@
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Text Domain: cmdpost-connector
- * Update URI: https://sevenseven.tech/cmdpost-connector/
+ * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 namespace CmdPost\Connector;
@@ -16,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
 const OPTION = 'cmdpost_connector';
 const LAST_REPORT_OPTION = 'cmdpost_connector_last_report';
 const REPORT_HOOK = 'cmdpost_connector_report';
+const CHALLENGE_PATTERN = '/^[0-9a-f]{64}$/D';
 
 require_once __DIR__ . '/updates.php';
 
@@ -82,8 +84,8 @@ function settings_page() {
 
 	$connection = get_option( OPTION, array() );
 	$version = get_file_data( __FILE__, array( 'version' => 'Version' ) )['version'];
-	$result = isset( $_GET['cmdpost_result'] ) && is_string( $_GET['cmdpost_result'] )
-		? sanitize_key( wp_unslash( $_GET['cmdpost_result'] ) ) : '';
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This query argument only selects a predefined notice.
+	$result = isset( $_GET['cmdpost_result'] ) && is_string( $_GET['cmdpost_result'] ) ? sanitize_key( wp_unslash( $_GET['cmdpost_result'] ) ) : '';
 	$messages = array(
 		'paired'     => __( 'Connected to CmdPost.', 'cmdpost-connector' ),
 		'reported'   => __( 'CmdPost received your report.', 'cmdpost-connector' ),
@@ -115,7 +117,12 @@ function settings_page() {
 				<img class="cmdpost-dashboard-logo" src="<?php echo esc_url( plugins_url( 'assets/cmdpost-logo-gradient-pink-text.svg', __FILE__ ) ); ?>" alt="" width="759" height="160">
 				<h1><?php esc_html_e( 'CmdPost Connector', 'cmdpost-connector' ); ?></h1>
 			</div>
-			<p class="description"><?php echo esc_html( sprintf( __( 'Version %s', 'cmdpost-connector' ), $version ) ); ?></p>
+			<p class="description">
+				<?php
+				/* translators: %s: Installed version of CmdPost Connector. */
+				echo esc_html( sprintf( __( 'Version %s', 'cmdpost-connector' ), $version ) );
+				?>
+			</p>
 		</header>
 		<?php if ( isset( $messages[ $result ] ) ) : ?>
 			<?php $success = in_array( $result, array( 'paired', 'reported', 'cleared', 'recent', 'updates-enabled', 'updates-disabled' ), true ); ?>
@@ -196,15 +203,16 @@ function settings_page() {
 	<?php
 }
 
-function post_field( $name ) {
-	return isset( $_POST[ $name ] ) && is_string( $_POST[ $name ] ) ? trim( wp_unslash( $_POST[ $name ] ) ) : '';
+function request_method() {
+	return isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
 }
 
 function handle_settings_action() {
-	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || is_multisite() || ! current_user_can( 'manage_options' ) ) {
+	if ( 'POST' !== request_method() || is_multisite() || ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'You cannot manage the CmdPost connection.', 'cmdpost-connector' ), '', array( 'response' => 403 ) );
 	}
-	$task = post_field( 'task' );
+	// The task selects the nonce field. Verify the nonce before dispatching the task.
+	$task = isset( $_POST['task'] ) && is_string( $_POST['task'] ) ? sanitize_text_field( wp_unslash( $_POST['task'] ) ) : '';
 	$kind = 0 === strpos( $task, 'core_updates_' ) ? 'core' : ( 0 === strpos( $task, 'theme_updates_' ) ? 'theme' : 'plugin' );
 	$nonce_field = 0 === strpos( $task, 'updates_' ) || 'plugin' !== $kind ? '_cmdpost_' . $kind . '_nonce' : '_wpnonce';
 	check_admin_referer( 'cmdpost_connector', $nonce_field );
@@ -214,8 +222,12 @@ function handle_settings_action() {
 		$task = 'pair';
 	}
 	if ( 'pair' === $task ) {
-		$result = empty( get_option( OPTION, array() )['token'] )
-			? pair( post_field( 'endpoint' ), post_field( 'code' ) )
+		$endpoint = isset( $_POST['endpoint'] ) && is_string( $_POST['endpoint'] )
+			? esc_url_raw( wp_unslash( $_POST['endpoint'] ), array( 'https' ) ) : '';
+		$code     = isset( $_POST['code'] ) && is_string( $_POST['code'] )
+			? sanitize_text_field( wp_unslash( $_POST['code'] ) ) : '';
+		$result   = empty( get_option( OPTION, array() )['token'] )
+			? pair( $endpoint, $code )
 			: 'already-connected';
 	} elseif ( 'report' === $task ) {
 		retry_pending_update_result();
@@ -286,7 +298,7 @@ function pair( $endpoint, $code ) {
 }
 
 function is_challenge_value( $value ) {
-	return is_string( $value ) && 1 === preg_match( '/^[0-9a-f]{64}$/D', $value );
+	return is_string( $value ) && 1 === preg_match( CHALLENGE_PATTERN, $value );
 }
 
 function verify_ownership( $endpoint, $pairing, $data ) {
@@ -311,16 +323,28 @@ function verify_ownership( $endpoint, $pairing, $data ) {
 }
 
 function serve_verification_challenge() {
-	if ( 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! isset( $_GET['cmdpost_verify'] ) ) {
+	if ( 'GET' !== request_method() ) {
 		return;
 	}
-	$id = $_GET['cmdpost_verify'];
-	if ( ! is_challenge_value( $id ) ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- CmdPost reads a short-lived challenge without a WordPress login session.
+	if ( ! isset( $_GET['cmdpost_verify'] ) || ! is_string( $_GET['cmdpost_verify'] ) ) {
 		return;
 	}
-	$request_path = wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH );
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The public challenge ID must match its exact format.
+	$id = filter_var( wp_unslash( $_GET['cmdpost_verify'] ), FILTER_VALIDATE_REGEXP, array( 'options' => array( 'regexp' => CHALLENGE_PATTERN ) ) );
+	if ( false === $id ) {
+		return;
+	}
+	// Preserve the exact request path, including percent-encoded characters.
+	$request_uri  = isset( $_SERVER['REQUEST_URI'] )
+		? filter_var( wp_unslash( $_SERVER['REQUEST_URI'] ), FILTER_VALIDATE_REGEXP, array( 'options' => array( 'regexp' => '/^\/[^\x00-\x20\x7f]*$/D' ) ) )
+		: false;
+	if ( false === $request_uri ) {
+		return;
+	}
+	$request_path = wp_parse_url( $request_uri, PHP_URL_PATH );
 	$site_path    = wp_parse_url( site_address(), PHP_URL_PATH );
-	if ( untrailingslashit( (string) $request_path ) !== untrailingslashit( (string) $site_path ) ) {
+	if ( ! is_string( $request_path ) || untrailingslashit( $request_path ) !== untrailingslashit( (string) $site_path ) ) {
 		return;
 	}
 
@@ -332,7 +356,7 @@ function serve_verification_challenge() {
 		exit;
 	}
 	status_header( 200 );
-	echo 'cmdpost-wordpress-verification-v1:' . $proof;
+	echo 'cmdpost-wordpress-verification-v1:' . esc_html( $proof );
 	exit;
 }
 
