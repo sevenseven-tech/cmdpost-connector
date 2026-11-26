@@ -3,7 +3,9 @@ Tags: monitoring, site management, updates, maintenance
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.6.1
+Stable tag: 0.6.3
+License: GPL-2.0-or-later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Connect a WordPress site to CmdPost to monitor installed versions and apply individually approved updates.
 
@@ -46,6 +48,12 @@ When an administrator enables remote updates, the connector sends the enabled pe
 See the [CmdPost privacy policy](https://cmdpost.sevenseven.tech/privacy) for information about data use, retention, and deletion.
 
 == Changelog ==
+
+= 0.6.3 =
+* Updated update-permission colors and the clear connection hover state.
+
+= 0.6.2 =
+* Updated the connector dashboard with CmdPost branding and clearer connection and update permission settings.
 
 = 0.6.1 =
 * Added a Settings shortcut to the CmdPost Connector row in Installed Plugins.

@@ -15,7 +15,7 @@ Run these commands from the parent directory that contains `cmdpost-connector/`.
 
 ```sh
 mkdir -p dist
-zip -X dist/cmdpost-connector.zip cmdpost-connector/cmdpost-connector.php cmdpost-connector/updates.php cmdpost-connector/core-updates.php cmdpost-connector/uninstall.php
+zip -X dist/cmdpost-connector.zip cmdpost-connector/*.php cmdpost-connector/readme.txt cmdpost-connector/LICENSE cmdpost-connector/assets/*
 ```
 
 The ZIP should contain one top-level directory, `cmdpost-connector/`. The plugin
@@ -113,3 +113,16 @@ These routes are HTTPS POST requests with `Content-Type: application/json`.
 
 The folder can move to its own repository as-is. Keep the versioned API
 contract in sync with the CmdPost app when releasing a connector update.
+
+## GitHub releases
+
+Run `bash scripts/package.sh` from this repository to create
+`/tmp/cmdpost-connector.zip` (or pass an output file path). The package contains
+only plugin PHP files, assets, readme, and license under `cmdpost-connector/`.
+Requires Python 3.
+
+Attach `cmdpost-connector.zip` to each stable GitHub release and mark that
+release as latest. Keep the asset filename unchanged so this app download
+link always resolves to the latest published package:
+
+https://github.com/sevenseven-tech/cmdpost-connector/releases/latest/download/cmdpost-connector.zip
